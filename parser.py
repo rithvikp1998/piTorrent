@@ -73,3 +73,11 @@ def get_dict(metafile):
 		# If the satellite value is a string
 		else:
 			dict[key_name] = get_str(metafile, c)
+
+def bencode_dict(dict):
+	result = 'd'
+	for key in dict:
+		result += str(len(key)) + ':' + key
+		result += str(len(str(dict[key]))) + ':' + str(dict[key])
+	result += 'e'
+	return result

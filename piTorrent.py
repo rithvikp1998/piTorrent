@@ -1,5 +1,8 @@
 import os.path
 import argparse
+import hashlib
+import requests
+import time
 
 import parser
 
@@ -23,6 +26,7 @@ class torrent:
 		self.file_name = file_name
 		self.metafile_dict = {}
 		self.info_dict = {}
+		self.request_parameters = {}
 
 		self.metafile = open(file_name, 'r', encoding = "ISO-8859-1")
 		
@@ -30,6 +34,24 @@ class torrent:
 			self.metafile_dict = parser.get_dict(self.metafile)
 			for key in self.metafile_dict:
 				print(key, ':', self.metafile_dict[key])
+
+		self.info_dict = self.metafile_dict['info']
+		self.info_dict_hash = hashlib.sha1(parser.bencode_dict(self.info_dict).encode('utf-8')).digest()
+		self.peer_id_hash = str(time.time())
+		self.port = 6881 # [TODO] Search between 6881 - 6889 instead
+
+		self.request_parameters['info_hash'] = self.info_dict_hash
+		self.request_parameters['peer_id'] = self.peer_id_hash
+		self.request_parameters['port'] = self.port
+		self.request_parameters['uploaded'] = 0
+		self.request_parameters['downloaded'] = 0
+		self.request_parameters['left'] = self.info_dict['length']
+		self.request_parameters['compact'] = 1
+		self.request_parameters['supportcrypto'] = 1
+		self.request_parameters['event'] = 'started'
+
+		#self.response = requests.get(self.metafile_dict['announce-list'][0], params=self.request_parameters)
+		#print(self.response.content)
 
 def main():
 	arg_parser = argparse.ArgumentParser()
