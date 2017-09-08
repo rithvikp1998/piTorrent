@@ -1,6 +1,8 @@
 import os.path
 import argparse
 
+import parser
+
 def check_input_file_name(value):
 	if not value.endswith('.torrent'):
 		raise argparse.ArgumentTypeError('The metafile name should be a .torrent file')
@@ -15,21 +17,35 @@ def check_output_location(value):
 		raise argparse.ArgumentError("You don't have access to write to the destination")
 	return value
 
+class torrent:
+
+	def __init__(self, file_name):
+		self.file_name = file_name
+		self.metafile_dict = {}
+		self.info_dict = {}
+
+		self.metafile = open(file_name, 'r', encoding = "ISO-8859-1")
+		
+		if self.metafile.read(1)=='d':
+			self.metafile_dict = parser.get_dict(self.metafile)
+			for key in self.metafile_dict:
+				print(key, ':', self.metafile_dict[key])
+
 def main():
-	parser = argparse.ArgumentParser()
+	arg_parser = argparse.ArgumentParser()
 
-	parser.add_argument('--metafile', help='Name of the .torrent file', nargs=1, type=lambda value:check_input_file_name(value))
-	parser.add_argument('--dest', help='Location where the file needs to be downloaded', nargs=1, type=lambda value:check_output_location(value))
+	arg_parser.add_argument('--metafile', help='Name of the .torrent file', nargs=1, type=lambda value:check_input_file_name(value))
+	arg_parser.add_argument('--dest', help='Location where the file needs to be downloaded', nargs=1, type=lambda value:check_output_location(value))
 
-	args = parser.parse_args()
+	args = arg_parser.parse_args()
 	if not args.metafile:
 		print("Please specify a metafile using --metafile option")
 		return
 	if not args.dest:
 		print("Please specify a output destination using --dest option")
 		return
-	file = open(args.metafile[0], 'r', encoding = "ISO-8859-1")
-	print(file.read(10))
+
+	torrent_object = torrent(args.metafile[0])
 
 if __name__=='__main__':
 	main()
