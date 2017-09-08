@@ -45,7 +45,7 @@ class torrent:
 		self.request_parameters['port'] = self.port
 		self.request_parameters['uploaded'] = 0
 		self.request_parameters['downloaded'] = 0
-		self.request_parameters['left'] = self.info_dict['length']
+		self.request_parameters['left'] = 100 # [TODO] Change this to sum of lengths of files
 		self.request_parameters['compact'] = 1
 		self.request_parameters['supportcrypto'] = 1
 		self.request_parameters['event'] = 'started'

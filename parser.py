@@ -7,6 +7,8 @@ def get_list(metafile):
 			lc+=1
 		elif c=='e':
 			lc-=1
+		elif c=='d':
+			satellite_list.append(get_dict(metafile))
 		else:
 			length_list_item = ''
 			while c!=':':
