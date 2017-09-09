@@ -4,6 +4,8 @@ import hashlib
 import requests
 import time
 
+from collections import OrderedDict
+
 import parser
 
 def check_input_file_name(value):
@@ -25,7 +27,7 @@ class torrent:
 	def __init__(self, file_name):
 		self.file_name = file_name
 		self.metafile_dict = {}
-		self.info_dict = {}
+		self.info_dict = OrderedDict() # OrderedDict is mandatory to get correct value of info_dict_hash
 		self.request_parameters = {}
 		self.tracker_response_dict = {}
 		self.peer_ips = []

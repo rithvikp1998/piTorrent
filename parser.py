@@ -1,5 +1,7 @@
 import io
 
+from collections import OrderedDict
+
 def get_list(metafile):
 	satellite_list = []
 	while True:
@@ -33,7 +35,7 @@ def get_str(metafile, c):
 	return(metafile.read(length))
 
 def get_dict(metafile):
-	dictionary = {}
+	dictionary = OrderedDict()
 	while True:
 		'''
 		Get key name, which will always be a string
@@ -73,16 +75,16 @@ def bencode_dict(dictionary):
 	result = 'd'
 	for key in dictionary:
 		result += str(len(key)) + ':' + key
-	if isinstance(dictionary[key], str):
-		result += str(len(dictionary[key])) + ':' + dictionary[key]
-	elif isinstance(dictionary[key], int):
-		result += 'i' + str(dictionary[key]) + 'e'
-	elif isinstance(dictionary[key], list):
-		result += bencode_list(dictionary[key])
-	elif isinstance(dictionary[key], dict):
-		result += bencode_dict(dictionary[key])
-	else:
-		print("Unknown type error in parser.bencode_dict")
+		if isinstance(dictionary[key], str):
+			result += str(len(dictionary[key])) + ':' + dictionary[key]
+		elif isinstance(dictionary[key], int):
+			result += 'i' + str(dictionary[key]) + 'e'
+		elif isinstance(dictionary[key], list):
+			result += bencode_list(dictionary[key])
+		elif isinstance(dictionary[key], dict):
+			result += bencode_dict(dictionary[key])
+		else:
+			print("Unknown type error in parser.bencode_dict")
 
 	result += 'e'
 	return result
