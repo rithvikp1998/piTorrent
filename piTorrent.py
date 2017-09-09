@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import requests
 import time
+import socket
 
 from collections import OrderedDict
 
@@ -57,6 +58,13 @@ class torrent:
 			self.get_peers()
 		else:
 			print("Tracker returned no peers")
+			return
+
+		if self.peer_ips:
+			self.handshake()
+		else:
+			print("No peers found to start handshake")
+			return
 
 	def send_tracker_request(self):
 		self.request_parameters['info_hash'] = self.info_dict_hash
@@ -69,8 +77,8 @@ class torrent:
 		self.request_parameters['supportcrypto'] = 1
 		self.request_parameters['event'] = 'started'
 
-		print("Sending a http request to", self.metafile_dict['announce-list'][0][0]) # [TODO] Check for UDP and act accordingly
-		self.response = requests.get(self.metafile_dict['announce-list'][0][0], params=self.request_parameters)
+		print("Sending a http request to", self.metafile_dict['announce']) # [TODO] Check for UDP and act accordingly
+		self.response = requests.get(self.metafile_dict['announce'], params=self.request_parameters)
 		self.response.encoding = 'ISO-8859-1'
 		self.response_string = self.response.content.decode('ISO-8859-1')
 		
@@ -86,12 +94,47 @@ class torrent:
 			ip=''
 			port=''
 			ip = '.'.join(peers_list[:4])
-			port = str(int(peers_list[4])*256 + int(peers_list[5]))
+			port = int(peers_list[4])*256 + int(peers_list[5])
 			self.peer_ips.append((ip, port))
 			peers_list=peers_list[6:]
 
 		print("The list of available peers is:", self.peer_ips)
 
+	def handshake(self):
+		pstr = "BitTorrent protocol"
+		packet = str(len(pstr)) + pstr + str(chr(0)*8) + str(self.info_dict_hash) + self.peer_id
+		for i in self.peer_ips[1:]:
+			peer_socket = socket.socket()
+			peer_socket.settimeout(0.1)
+			peer_socket.setblocking(True)
+			try:
+				print(i, self.port)
+				peer_socket.connect(i)
+			except socket.timeout:
+				print("Timeout exception")
+				continue
+			except socket.error:
+				print("Socket error exception")
+				continue
+			except:
+				raise Exception
+			
+			peer_socket.send(packet)
+			try:
+				peer_response = peer_socket.recv(68)
+				print(peer_response)
+			except:
+				raise Exception
+
+	def listen_for_peers(self):
+		listener = socket.socket()
+		listener.bind(('localhost', 6881))
+		listener.listen(1)
+
+		while True:
+			connection, client_address = listener.accept()
+			print(client_address)
+			break
 def main():
 	arg_parser = argparse.ArgumentParser()
 
