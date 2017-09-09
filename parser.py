@@ -49,8 +49,8 @@ def get_dict(metafile):
 
 		# Since 'pieces' corresponds to the concatenated string of 20-byte hash values, I'll handle this case later [TODO]
 		if key_name == 'pieces': 
-			return dict
-		
+			return dict # This line returns the info dict which contains the key_name 'pieces'
+
 		'''
 		Get satellite value that corresponds to the key. It can be dict, list, string or int
 		'''
@@ -67,6 +67,8 @@ def get_dict(metafile):
 		# If the satellite value is a dict
 		elif c=='d':
 			dict[key_name] = get_dict(metafile)
+			if key_name=='info':
+				return dict # If the info dict is returned, stop parsing
 
 		#If the dict reached an end
 		elif c=='e':
