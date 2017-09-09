@@ -67,8 +67,8 @@ class torrent:
 		self.request_parameters['supportcrypto'] = 1
 		self.request_parameters['event'] = 'started'
 
-		print("Sending a http request to", self.metafile_dict['announce-list'][0]) # [TODO] Check for UDP and act accordingly
-		self.response = requests.get(self.metafile_dict['announce-list'][0], params=self.request_parameters)
+		print("Sending a http request to", self.metafile_dict['announce-list'][0][0]) # [TODO] Check for UDP and act accordingly
+		self.response = requests.get(self.metafile_dict['announce-list'][0][0], params=self.request_parameters)
 		self.response.encoding = 'ISO-8859-1'
 		self.response_string = self.response.content.decode('ISO-8859-1')
 		

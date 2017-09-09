@@ -2,22 +2,17 @@ import io
 
 def get_list(metafile):
 	satellite_list = []
-	lc = 1
-	while lc!=0:
+	while True:
 		c=metafile.read(1)
 		if c=='l':
-			lc+=1
+			satellite_list.append(get_list(metafile))
 		elif c=='e':
-			lc-=1
+			return satellite_list
 		elif c=='d':
 			satellite_list.append(get_dict(metafile))
 		else:
-			length_list_item = ''
-			while c!=':':
-				length_list_item += c
-				c = metafile.read(1)
-			length_list_item=int(length_list_item)
-			satellite_list.append(metafile.read(length_list_item))
+			satellite_list.append(get_str(metafile, c))
+
 	return satellite_list
 
 def get_int(metafile):
@@ -38,20 +33,16 @@ def get_str(metafile, c):
 	return(metafile.read(length))
 
 def get_dict(metafile):
-	dict = {}
+	dictionary = {}
 	while True:
 		'''
 		Get key name, which will always be a string
 		'''
 		c = metafile.read(1)
 		if c=='e':
-			return dict
+			return dictionary
 		else:
 			key_name = get_str(metafile, c)
-
-		# Since 'pieces' corresponds to the concatenated string of 20-byte hash values, I'll handle this case later [TODO]
-		if key_name == 'pieces': 
-			return dict # This line returns the info dict which contains the key_name 'pieces'
 
 		'''
 		Get satellite value that corresponds to the key. It can be dict, list, string or int
@@ -60,38 +51,62 @@ def get_dict(metafile):
 
 		# If the satellite value is a list
 		if c=='l':
-			dict[key_name] = get_list(metafile)
+			dictionary[key_name] = get_list(metafile)
 
 		# If the satellite value is an int
 		elif c=='i':
-			dict[key_name] = get_int(metafile)
+			dictionary[key_name] = get_int(metafile)
 
 		# If the satellite value is a dict
 		elif c=='d':
-			dict[key_name] = get_dict(metafile)
-			if key_name=='info':
-				return dict # If the info dict is returned, stop parsing
+			dictionary[key_name] = get_dict(metafile)
 
 		#If the dict reached an end
 		elif c=='e':
-			return dict
+			return dictionary
 
 		# If the satellite value is a string
 		else:
-			dict[key_name] = get_str(metafile, c)
+			dictionary[key_name] = get_str(metafile, c)
 
-def bencode_dict(dict):
+def bencode_dict(dictionary):
 	result = 'd'
-	for key in dict:
+	for key in dictionary:
 		result += str(len(key)) + ':' + key
-		result += str(len(str(dict[key]))) + ':' + str(dict[key])
+	if isinstance(dictionary[key], str):
+		result += str(len(dictionary[key])) + ':' + dictionary[key]
+	elif isinstance(dictionary[key], int):
+		result += 'i' + str(dictionary[key]) + 'e'
+	elif isinstance(dictionary[key], list):
+		result += bencode_list(dictionary[key])
+	elif isinstance(dictionary[key], dict):
+		result += bencode_dict(dictionary[key])
+	else:
+		print("Unknown type error in parser.bencode_dict")
+
+	result += 'e'
+	return result
+
+def bencode_list(data):
+	result = 'l'
+	for i in data:
+		if isinstance(i, str):
+			result += str(len(i)) + ':' + i
+		elif isinstance(i, int):
+			result += 'i' + str(i) + 'e'
+		elif isinstance(i, list):
+			result += bencode_list(i)
+		elif isinstance(i, dict):
+			result += bencode_dict(i)
+		else:
+			print("Unknown type error in parser.bencode_list")
 	result += 'e'
 	return result
 
 def bdecode_response_string(response_string):
 	f = io.StringIO(response_string)
 	if f.read(1)=='d':
-		dict = get_dict(f)
-		return dict
+		dictionary = get_dict(f)
+		return dictionary
 	else:
 		print("Invalid response string. The response should be a bencoded dictionary")
