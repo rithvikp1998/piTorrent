@@ -40,12 +40,12 @@ class torrent:
 		self.info_dict = self.metafile_dict['info']
 		self.info_dict_hash = hashlib.sha1(parser.bencode_dict(self.info_dict).encode('utf-8')).digest()
 		self.peer_id = str(time.time())
-		if len(self.peer_id > 20):
+		if len(self.peer_id) > 20:
 			self.peer_id = self.peer_id[:20]
 		else:
 			while len(self.peer_id)!=20:
 				self.peer_id += '0'
-	
+
 		self.port = 6881 # [TODO] Search between 6881 - 6889 instead
 
 		self.request_parameters['info_hash'] = self.info_dict_hash
