@@ -27,6 +27,7 @@ class torrent:
 		self.metafile_dict = {}
 		self.info_dict = {}
 		self.request_parameters = {}
+		self.tracker_response_dict = {}
 
 		self.metafile = open(file_name, 'r', encoding = "ISO-8859-1")
 		
@@ -47,7 +48,10 @@ class torrent:
 				self.peer_id += '0'
 
 		self.port = 6881 # [TODO] Search between 6881 - 6889 instead
+		
+		self.send_tracker_request()
 
+	def send_tracker_request(self):
 		self.request_parameters['info_hash'] = self.info_dict_hash
 		self.request_parameters['peer_id'] = self.peer_id
 		self.request_parameters['port'] = self.port
@@ -60,7 +64,11 @@ class torrent:
 
 		print("Sending a http request to", self.metafile_dict['announce-list'][0]) # [TODO] Check for UDP and act accordingly
 		self.response = requests.get(self.metafile_dict['announce-list'][0], params=self.request_parameters)
-		print(self.response.content)
+		self.response_string = self.response.content.decode('utf-8')
+		
+		self.tracker_response_dict = parser.bdecode_response_string(self.response_string)
+		print("Tracker responded with the following details")
+		print(self.tracker_response_dict)
 
 def main():
 	arg_parser = argparse.ArgumentParser()

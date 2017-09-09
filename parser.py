@@ -1,3 +1,5 @@
+import io
+
 def get_list(metafile):
 	satellite_list = []
 	lc = 1
@@ -85,3 +87,11 @@ def bencode_dict(dict):
 		result += str(len(str(dict[key]))) + ':' + str(dict[key])
 	result += 'e'
 	return result
+
+def bdecode_response_string(response_string):
+	f = io.StringIO(response_string)
+	if f.read(1)=='d':
+		dict = get_dict(f)
+		return dict
+	else:
+		print("Invalid response string. The response should be a bencoded dictionary")
