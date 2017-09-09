@@ -28,6 +28,7 @@ class torrent:
 		self.info_dict = {}
 		self.request_parameters = {}
 		self.tracker_response_dict = {}
+		self.peer_ips = []
 
 		self.metafile = open(file_name, 'r', encoding = "ISO-8859-1")
 		
@@ -50,6 +51,10 @@ class torrent:
 		self.port = 6881 # [TODO] Search between 6881 - 6889 instead
 		
 		self.send_tracker_request()
+		if 'peers' in self.tracker_response_dict:
+			self.get_peers()
+		else:
+			print("Tracker returned no peers")
 
 	def send_tracker_request(self):
 		self.request_parameters['info_hash'] = self.info_dict_hash
@@ -64,11 +69,26 @@ class torrent:
 
 		print("Sending a http request to", self.metafile_dict['announce-list'][0]) # [TODO] Check for UDP and act accordingly
 		self.response = requests.get(self.metafile_dict['announce-list'][0], params=self.request_parameters)
-		self.response_string = self.response.content.decode('utf-8')
+		self.response.encoding = 'ISO-8859-1'
+		self.response_string = self.response.content.decode('ISO-8859-1')
 		
 		self.tracker_response_dict = parser.bdecode_response_string(self.response_string)
-		print("Tracker responded with the following details")
+		print("Tracker responded with the following details:")
 		print(self.tracker_response_dict)
+
+	def get_peers(self):
+		peers_list = []
+		for i in self.tracker_response_dict['peers']:
+			peers_list.append(str(ord(i)))
+		while peers_list:
+			ip=''
+			port=''
+			ip = '.'.join(peers_list[:4])
+			port = str(int(peers_list[4])*256 + int(peers_list[5]))
+			self.peer_ips.append((ip, port))
+			peers_list=peers_list[6:]
+
+		print("The list of available peers is:", self.peer_ips)
 
 def main():
 	arg_parser = argparse.ArgumentParser()
