@@ -61,7 +61,7 @@ class torrent:
 			return
 
 		if self.peer_ips:
-			self.listen_for_peers() # [TODO] Run this in a separate thread and go to next step
+			#self.listen_for_peers() # [TODO] Run this in a separate thread and go to next step
 			self.handshake()
 		else:
 			print("No peers found to start handshake")
@@ -110,21 +110,23 @@ class torrent:
 			peer_socket.settimeout(0.1)
 			peer_socket.setblocking(True)
 			i=('192.168.0.102', 6882) # To avoid port-forwarding discussion with my college ISP
-			try:					  # [TODO] See how Transmission's ports are forwarded
-				print(i, self.port)
-				peer_socket.connect(i)
-			except socket.timeout:
-				print("Timeout exception")
-				continue
-			except socket.error:
-				print("Socket error exception")
-				continue
-			except:
-				raise Exception
+			while True:				  # [TODO] See how Transmission's ports are forwarded
+				try:
+					peer_socket.connect(i)
+					break
+				except socket.timeout:
+					print("Timeout exception")
+					break
+				except socket.error:
+					print("Socket error exception")
+					time.sleep(5)
+					continue
+				except:
+					raise Exception
 			
-			peer_socket.send(packet)
+			peer_socket.send(packet.encode())
 			try:
-				peer_response = peer_socket.recv(68)
+				peer_response = peer_socket.recv(1024)
 				print(peer_response)
 			except:
 				raise Exception
@@ -135,11 +137,14 @@ class torrent:
 		self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.listener.bind(i)
 		self.listener.listen(5)
-		print('Listening on', (address, port))
+		print('Listening on', i)
 
 		while True:
 			connection, client_address = self.listener.accept()
 			print("Client address", client_address)
+			data = connection.recv(1024)
+			reply = ' '.join(["Received the handshake packet from", client_address[0], str(client_address[1])])
+			connection.send(reply.encode())
 			break
 
 def main():
@@ -151,6 +156,7 @@ def main():
 	args = arg_parser.parse_args()
 	if not args.metafile:
 		print("Please specify a metafile using --metafile option")
+		connection.send(data)
 		return
 	if not args.dest:
 		print("Please specify a output destination using --dest option")
