@@ -2,12 +2,11 @@ import os.path
 import argparse
 import hashlib
 import requests
-import time
-import socket
 
 from collections import OrderedDict
 
 import parser
+import peer
 
 def check_input_file_name(value):
 	if not value.endswith('.torrent'):
@@ -32,14 +31,15 @@ class torrent:
 		self.request_parameters = {}
 		self.tracker_response_dict = {}
 		self.peer_ips = []
+		self.peers = []
+
+		self.ip = '14.139.38.173' # For the sake of testing
 
 		self.metafile = open(file_name, 'r', encoding = "ISO-8859-1")
-		
 		if self.metafile.read(1)=='d':
 			print("Parsing metafile")
 			self.metafile_dict = parser.get_dict(self.metafile)
 			print("Parsing metafile complete")
-
 		self.metafile.close()
 
 		self.info_dict = self.metafile_dict['info']
@@ -61,11 +61,14 @@ class torrent:
 			return
 
 		if self.peer_ips:
-			#self.listen_for_peers() # [TODO] Run this in a separate thread and go to next step
-			self.handshake()
+			for i in self.peer_ips:
+				self.peers.append(peer.peer(i[0], i[1], self.info_dict_hash, self.peer_id))
 		else:
 			print("No peers found to start handshake")
 			return
+
+		for i in self.peers:
+			i.handshake()
 
 	def send_tracker_request(self):
 		self.request_parameters['info_hash'] = self.info_dict_hash
@@ -96,40 +99,11 @@ class torrent:
 			port=''
 			ip = '.'.join(peers_list[:4])
 			port = int(peers_list[4])*256 + int(peers_list[5])
-			self.peer_ips.append((ip, port))
+			if ip != self.ip or port != self.port:
+				self.peer_ips.append((ip, port))
 			peers_list=peers_list[6:]
 
 		print("The list of available peers is:", self.peer_ips)
-
-	def handshake(self):
-		pstr = "BitTorrent protocol"
-		packet = chr(len(pstr)) + pstr + str(chr(0)*8) + str(self.info_dict_hash.decode('ISO-8859-1')) + self.peer_id
-		assert len(packet) == 49 + len(pstr)
-		for i in self.peer_ips[:1]:
-			peer_socket = socket.socket()
-			peer_socket.settimeout(0.1)
-			peer_socket.setblocking(True)
-			i=('192.168.0.102', 6882) # To avoid port-forwarding discussion with my college ISP
-			while True:				  # [TODO] See how Transmission's ports are forwarded
-				try:
-					peer_socket.connect(i)
-					break
-				except socket.timeout:
-					print("Timeout exception")
-					break
-				except socket.error:
-					print("Socket error exception")
-					time.sleep(5)
-					continue
-				except:
-					raise Exception
-			
-			peer_socket.send(packet.encode())
-			try:
-				peer_response = peer_socket.recv(1024)
-				print(peer_response)
-			except:
-				raise Exception
 
 	def listen_for_peers(self):
 		i = ('192.168.0.101', 6881) 		# To avoid port-forwarding discussion with my college ISP
