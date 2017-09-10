@@ -44,7 +44,7 @@ class torrent:
 
 		self.info_dict = self.metafile_dict['info']
 		self.info_dict_hash = hashlib.sha1(parser.bencode_dict(self.info_dict).encode('utf-8')).digest()
-		self.peer_id = str(time.time())
+		self.peer_id = "piTorrentTestPeer001"
 		if len(self.peer_id) > 20:
 			self.peer_id = self.peer_id[:20]
 		else:
@@ -61,6 +61,7 @@ class torrent:
 			return
 
 		if self.peer_ips:
+			self.listen_for_peers() # [TODO] Run this in a separate thread and go to next step
 			self.handshake()
 		else:
 			print("No peers found to start handshake")
@@ -102,12 +103,14 @@ class torrent:
 
 	def handshake(self):
 		pstr = "BitTorrent protocol"
-		packet = str(len(pstr)) + pstr + str(chr(0)*8) + str(self.info_dict_hash) + self.peer_id
-		for i in self.peer_ips[1:]:
+		packet = chr(len(pstr)) + pstr + str(chr(0)*8) + str(self.info_dict_hash.decode('ISO-8859-1')) + self.peer_id
+		assert len(packet) == 49 + len(pstr)
+		for i in self.peer_ips[:1]:
 			peer_socket = socket.socket()
 			peer_socket.settimeout(0.1)
 			peer_socket.setblocking(True)
-			try:
+			i=('192.168.0.102', 6882) # To avoid port-forwarding discussion with my college ISP
+			try:					  # [TODO] See how Transmission's ports are forwarded
 				print(i, self.port)
 				peer_socket.connect(i)
 			except socket.timeout:
@@ -127,14 +130,18 @@ class torrent:
 				raise Exception
 
 	def listen_for_peers(self):
-		listener = socket.socket()
-		listener.bind(('localhost', 6881))
-		listener.listen(1)
+		i = ('192.168.0.101', 6881) 		# To avoid port-forwarding discussion with my college ISP
+		self.listener = socket.socket()		# [TODO] See how Transmission's ports are forwarded
+		self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self.listener.bind(i)
+		self.listener.listen(5)
+		print('Listening on', (address, port))
 
 		while True:
-			connection, client_address = listener.accept()
-			print(client_address)
+			connection, client_address = self.listener.accept()
+			print("Client address", client_address)
 			break
+
 def main():
 	arg_parser = argparse.ArgumentParser()
 
