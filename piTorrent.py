@@ -2,6 +2,8 @@ import os.path
 import argparse
 import hashlib
 import requests
+import time
+import socket
 
 from collections import OrderedDict
 
@@ -69,6 +71,7 @@ class torrent:
 
 		for i in self.peers:
 			i.handshake()
+		#self.listen_for_peers()
 
 	def send_tracker_request(self):
 		self.request_parameters['info_hash'] = self.info_dict_hash
@@ -113,13 +116,18 @@ class torrent:
 		self.listener.listen(5)
 		print('Listening on', i)
 
+		connection, client_address = self.listener.accept()
 		while True:
-			connection, client_address = self.listener.accept()
 			print("Client address", client_address)
-			data = connection.recv(1024)
-			reply = ' '.join(["Received the handshake packet from", client_address[0], str(client_address[1])])
-			connection.send(reply.encode())
-			break
+			data, ancdata, msg_flags, address = connection.recvmsg(1024)
+			if len(data)==68:
+				pstr = "BitTorrent protocol"
+				packet = chr(len(pstr)) + pstr + str(chr(0)*8) + str(self.info_dict_hash.decode('ISO-8859-1')) + self.peer_id
+				assert len(packet) == 49 + len(pstr)
+				connection.send(packet.encode('ISO-8859-1')) #Return the handshake if listener received a handshake
+			else:
+				print("Message", data.decode('ISO-8859-1'))
+			time.sleep(1)
 
 def main():
 	arg_parser = argparse.ArgumentParser()
@@ -130,7 +138,6 @@ def main():
 	args = arg_parser.parse_args()
 	if not args.metafile:
 		print("Please specify a metafile using --metafile option")
-		connection.send(data)
 		return
 	if not args.dest:
 		print("Please specify a output destination using --dest option")
