@@ -126,7 +126,7 @@ class torrent:
 				assert len(packet) == 49 + len(pstr)
 				connection.send(packet.encode('ISO-8859-1')) #Return the handshake if listener received a handshake
 			else:
-				print("Message", data.decode('ISO-8859-1'))
+				print("Binary message ", data)
 			time.sleep(1)
 
 def main():
