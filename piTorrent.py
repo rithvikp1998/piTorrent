@@ -4,11 +4,16 @@ import hashlib
 import requests
 import time
 import socket
+import threading
 
 from collections import OrderedDict
 
 import parser
 import peer
+
+MY_IP = '192.168.0.101'
+MY_PORT = 6881
+MY_PUBLIC_IP = '14.139.38.173'
 
 def check_input_file_name(value):
 	if not value.endswith('.torrent'):
@@ -35,7 +40,7 @@ class torrent:
 		self.peer_ips = []
 		self.peers = []
 
-		self.ip = '14.139.38.173' # For the sake of testing
+		self.ip = MY_IP # For the sake of testing
 
 		self.metafile = open(file_name, 'r', encoding = "ISO-8859-1")
 		if self.metafile.read(1)=='d':
@@ -53,7 +58,7 @@ class torrent:
 			while len(self.peer_id)!=20:
 				self.peer_id += '0'
 
-		self.port = 6881 # [TODO] Search between 6881 - 6889 instead
+		self.port = MY_PORT # [TODO] Search between 6881 - 6889 instead
 		
 		self.send_tracker_request()
 		if 'peers' in self.tracker_response_dict:
@@ -69,9 +74,12 @@ class torrent:
 			print("No peers found to start handshake")
 			return
 
+		listen_thread = threading.Thread(target=self.listen_for_peers)
+		listen_thread.daemon = True
+		listen_thread.start()
+
 		for i in self.peers:
 			i.handshake()
-		#self.listen_for_peers()
 
 	def send_tracker_request(self):
 		self.request_parameters['info_hash'] = self.info_dict_hash
@@ -102,15 +110,15 @@ class torrent:
 			port=''
 			ip = '.'.join(peers_list[:4])
 			port = int(peers_list[4])*256 + int(peers_list[5])
-			if ip != self.ip or port != self.port:
+			if ip != MY_PUBLIC_IP or port != self.port:
 				self.peer_ips.append((ip, port))
 			peers_list=peers_list[6:]
 
 		print("The list of available peers is:", self.peer_ips)
 
 	def listen_for_peers(self):
-		i = ('192.168.0.101', 6881) 		# To avoid port-forwarding discussion with my college ISP
-		self.listener = socket.socket()		# [TODO] See how Transmission's ports are forwarded
+		i = (MY_IP, MY_PORT)
+		self.listener = socket.socket()	
 		self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.listener.bind(i)
 		self.listener.listen(5)
