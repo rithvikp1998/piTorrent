@@ -38,9 +38,10 @@ class torrent:
 		self.request_parameters = {}
 		self.tracker_response_dict = {}
 		self.peer_ips = []
-		self.peers = []
-
-		self.ip = MY_IP # For the sake of testing
+		self.peers = {} # Dictionary with key being 'client_address' and value being 'peer' object
+		self.peer_table = {} # Dictionary with key being 'client_address' and value being 'connection' socket object
+		self.ip = MY_IP # Hard coded for the sake of testing
+		self.port = MY_PORT # Hard coded for the sake of testing
 
 		self.metafile = open(file_name, 'r', encoding = "ISO-8859-1")
 		if self.metafile.read(1)=='d':
@@ -57,8 +58,6 @@ class torrent:
 		else:
 			while len(self.peer_id)!=20:
 				self.peer_id += '0'
-
-		self.port = MY_PORT # [TODO] Search between 6881 - 6889 instead
 		
 		self.send_tracker_request()
 		if 'peers' in self.tracker_response_dict:
@@ -69,17 +68,18 @@ class torrent:
 
 		if self.peer_ips:
 			for i in self.peer_ips:
-				self.peers.append(peer.peer(i[0], i[1], self.info_dict_hash, self.peer_id))
+				self.peers[(i[0], i[1])] = peer.peer(i[0], i[1], self.info_dict_hash, self.peer_id)
+				print('Peers dict key value is', (i[0], i[1]))
 		else:
 			print("No peers found to start handshake")
 			return
 
 		listen_thread = threading.Thread(target=self.listen_for_peers)
-		listen_thread.daemon = True
+		listen_thread.daemon = False #[TODO] Getting some weird error when made True
 		listen_thread.start()
 
-		for i in self.peers:
-			i.handshake()
+		for address, peer_object in self.peers.items():
+			peer_object.handshake()
 
 	def send_tracker_request(self):
 		self.request_parameters['info_hash'] = self.info_dict_hash
@@ -124,17 +124,23 @@ class torrent:
 		self.listener.listen(5)
 		print('Listening on', i)
 
-		connection, client_address = self.listener.accept()
 		while True:
+			connection, client_address = self.listener.accept()
 			print("Client address", client_address)
-			data, ancdata, msg_flags, address = connection.recvmsg(1024)
-			if len(data)==68:
-				pstr = "BitTorrent protocol"
-				packet = chr(len(pstr)) + pstr + str(chr(0)*8) + str(self.info_dict_hash.decode('ISO-8859-1')) + self.peer_id
-				assert len(packet) == 49 + len(pstr)
-				connection.send(packet.encode('ISO-8859-1')) #Return the handshake if listener received a handshake
-			else:
-				print("Binary message ", data)
+			self.peer_table[client_address] = connection
+			for client_address, connection in self.peer_table.items():
+				data, ancdata, msg_flags, address = connection.recvmsg(1024)
+				peer_object = self.peers[client_address] # FIx conflicts b/w getting '192.168.x.x' and MY_PUBLIC_IP
+				if len(data)==68:
+					if self.data[28:48] == peer_object.info_dict_hash:
+						peer_object.handshake_recv = 1
+					if (peer_object.handshake_sent & peer_object.handshake_recv):
+						peer_object.handshake_made = 1
+						print("Handshake made with peer", client_address)
+					else:
+						peer_object.handshake()
+				else:
+					print("Binary message ", data)
 			time.sleep(1)
 
 def main():

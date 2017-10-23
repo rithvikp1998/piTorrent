@@ -10,6 +10,8 @@ class peer:
 		self.port = port
 		self.info_dict_hash = info_dict_hash
 		self.peer_id = peer_id
+		self.handshake_sent = 0
+		self.handshake_recv = 0
 		self.handshake_made = 0
 		self.peer_choking = 1
 		self.peer_interested = 0
@@ -45,20 +47,10 @@ class peer:
 			except:
 				raise Exception
 
-		self.peer_socket.send(packet.encode('ISO-8859-1'))
-		print("Handshake packet sent to", i)
-
-		try:
-			self.peer_response = self.peer_socket.recv(1024)
-			if self.peer_response[28:48] == self.info_dict_hash:
-				self.handshake_made = 1
-				while True:
-					self.send_message('unchoke') #Currently present for testing
-					time.sleep(3)
-			else:
-				self.peer_socket.close()
-		except:
-			raise Exception
+		bytes = self.peer_socket.send(packet.encode('ISO-8859-1'))
+		if bytes == len(packet):
+			print("Handshake packet sent to", i)
+			self.handshake_sent = 1
 
 	def send_message(self, type):
 		if self.handshake_made == 0:
