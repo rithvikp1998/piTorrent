@@ -103,17 +103,29 @@ class torrent:
 
 	def get_peers(self):
 		peers_list = []
-		for i in self.tracker_response_dict['peers']:
-			peers_list.append(str(ord(i)))
-		while peers_list:
-			ip=''
-			port=''
-			ip = '.'.join(peers_list[:4])
-			port = int(peers_list[4])*256 + int(peers_list[5])
-			if ip != MY_PUBLIC_IP or port != self.port:
-				self.peer_ips.append((ip, port))
-			peers_list=peers_list[6:]
+		if isinstance(self.tracker_response_dict['peers'], str):
+			for i in self.tracker_response_dict['peers']:
+				peers_list.append(str(ord(i)))
+			while peers_list:
+				ip=''
+				port=''
+				ip = '.'.join(peers_list[:4])
+				port = int(peers_list[4])*256 + int(peers_list[5])
+				if ip != MY_IP or port != self.port:
+					self.peer_ips.append((ip, port))
+				peers_list=peers_list[6:]
+		
+		elif isinstance(self.tracker_response_dict['peers'], list):
+			# qBitTorrent's embedded tracker gives peers list using list of ordered dicts
+			for i in self.tracker_response_dict['peers']:
+				ip=i['ip'][7:] # ip format is '::ffff:192.168.0.101'
+				port=i['port']
+				if ip != MY_IP or port != self.port:
+					self.peer_ips.append((ip, port))
 
+		else:
+			print("Tracker response case not handled")
+		
 		print("The list of available peers is:", self.peer_ips)
 
 	def listen_for_peers(self):
