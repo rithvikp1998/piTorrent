@@ -13,7 +13,6 @@ import peer
 
 MY_IP = '192.168.0.101'
 MY_PORT = 6881
-MY_PUBLIC_IP = '14.139.38.173'
 
 def check_input_file_name(value):
 	if not value.endswith('.torrent'):
@@ -38,7 +37,7 @@ class torrent:
 		self.request_parameters = {}
 		self.tracker_response_dict = {}
 		self.peer_ips = []
-		self.peers = {} # Dictionary with key being 'client_address' and value being 'peer' object
+		self.peers = {} # Dictionary with key being peer's ip addr and value being 'peer' object
 		self.peer_table = {} # Dictionary with key being 'client_address' and value being 'connection' socket object
 		self.ip = MY_IP # Hard coded for the sake of testing
 		self.port = MY_PORT # Hard coded for the sake of testing
@@ -68,8 +67,8 @@ class torrent:
 
 		if self.peer_ips:
 			for i in self.peer_ips:
-				self.peers[(i[0], i[1])] = peer.peer(i[0], i[1], self.info_dict_hash, self.peer_id)
-				print('Peers dict key value is', (i[0], i[1]))
+				self.peers[i[0]] = peer.peer(i[0], i[1], self.info_dict_hash, self.peer_id)
+				print('Peers dict key value is', i[0])
 		else:
 			print("No peers found to start handshake")
 			return
@@ -111,7 +110,7 @@ class torrent:
 				port=''
 				ip = '.'.join(peers_list[:4])
 				port = int(peers_list[4])*256 + int(peers_list[5])
-				if ip != MY_IP or port != self.port:
+				if ip != MY_IP:
 					self.peer_ips.append((ip, port))
 				peers_list=peers_list[6:]
 		
@@ -138,14 +137,16 @@ class torrent:
 
 		while True:
 			connection, client_address = self.listener.accept()
+			client_address = (client_address[0], self.peers[client_address[0]].port) # This port doesn't matter, so setting it to peer's listen port to avoid confusion
 			print("Client address", client_address)
 			self.peer_table[client_address] = connection
 			for client_address, connection in self.peer_table.items():
 				data, ancdata, msg_flags, address = connection.recvmsg(1024)
-				peer_object = self.peers[client_address] # FIx conflicts b/w getting '192.168.x.x' and MY_PUBLIC_IP
+				peer_object = self.peers[client_address[0]]
 				if len(data)==68:
-					if self.data[28:48] == peer_object.info_dict_hash:
+					if data[28:48] == peer_object.info_dict_hash:
 						peer_object.handshake_recv = 1
+						print("Handshake packet received from", client_address)
 					if (peer_object.handshake_sent & peer_object.handshake_recv):
 						peer_object.handshake_made = 1
 						print("Handshake made with peer", client_address)
