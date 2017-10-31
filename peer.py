@@ -1,9 +1,6 @@
 import socket
 import time
 
-PEER_IP = '192.168.0.102'
-PEER_PORT = 6882
-
 class peer:
 	def __init__(self, ip, port, info_dict_hash, peer_id):
 		self.ip = ip
@@ -32,7 +29,7 @@ class peer:
 		self.peer_socket = socket.socket()
 		self.peer_socket.settimeout(0.1)
 		self.peer_socket.setblocking(True)
-		i=(PEER_IP, PEER_PORT) # Should be self.ip and self.port
+		i=(self.ip, self.port)
 		while True:		
 			try:
 				self.peer_socket.connect(i)

@@ -11,7 +11,6 @@ from collections import OrderedDict
 import parser
 import peer
 
-MY_IP = '192.168.0.101'
 MY_PORT = 6881
 
 def check_input_file_name(value):
@@ -28,8 +27,12 @@ def check_output_location(value):
 		raise argparse.ArgumentError("You don't have access to write to the destination")
 	return value
 
-class torrent:
+def get_my_ip():
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	s.connect(("8.8.8.8", 80)) # Makes a dummy connection to Google's DNS server
+	return s.getsockname()[0]  # Gives IP of the interface that is used to connect to the network
 
+class torrent:
 	def __init__(self, file_name):
 		self.file_name = file_name
 		self.metafile_dict = {}
@@ -39,7 +42,7 @@ class torrent:
 		self.peer_ips = []
 		self.peers = {} # Dictionary with key being peer's ip addr and value being 'peer' object
 		self.peer_table = {} # Dictionary with key being 'client_address' and value being 'connection' socket object
-		self.ip = MY_IP # Hard coded for the sake of testing
+		self.ip = get_my_ip()
 		self.port = MY_PORT # Hard coded for the sake of testing
 
 		self.metafile = open(file_name, 'r', encoding = "ISO-8859-1")
@@ -110,7 +113,7 @@ class torrent:
 				port=''
 				ip = '.'.join(peers_list[:4])
 				port = int(peers_list[4])*256 + int(peers_list[5])
-				if ip != MY_IP:
+				if ip != self.ip:
 					self.peer_ips.append((ip, port))
 				peers_list=peers_list[6:]
 		
@@ -119,7 +122,7 @@ class torrent:
 			for i in self.tracker_response_dict['peers']:
 				ip=i['ip'][7:] # ip format is '::ffff:192.168.0.101'
 				port=i['port']
-				if ip != MY_IP or port != self.port:
+				if ip != self.ip:
 					self.peer_ips.append((ip, port))
 
 		else:
@@ -128,7 +131,7 @@ class torrent:
 		print("The list of available peers is:", self.peer_ips)
 
 	def listen_for_peers(self):
-		i = (MY_IP, MY_PORT)
+		i = (self.ip, self.port)
 		self.listener = socket.socket()	
 		self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.listener.bind(i)
