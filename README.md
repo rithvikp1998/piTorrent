@@ -1,5 +1,6 @@
 # piTorrent
-A simple BitTorrent client written in Python
+A simple BitTorrent client written in Python. The 'pi' in the name stands for the greek alphabet pi and is not a
+typo. The name is piTorrent and not pyTorrent.
 
 ## Prerequisites
 
