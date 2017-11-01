@@ -10,6 +10,7 @@ from collections import OrderedDict
 
 import parser
 import peer
+import listener
 
 MY_PORT = 6881
 
@@ -44,8 +45,8 @@ class torrent:
 		self.request_parameters = {}
 		self.tracker_response_dict = {}
 		self.peer_ips = []
-		self.peers = {} # Dictionary with key being peer's ip addr and value being 'peer' object
-		self.peer_table = {} # Dictionary with key being 'client_address' and value being 'connection' socket object
+		self.peer_table = {} # Dictionary with key being peer's ip addr and value being 'peer' object
+		self.conn_table = {} # Dictionary with key being 'client_address' and value being 'connection' socket object
 		self.ip = get_my_ip()
 		self.port = MY_PORT # Hard coded for the sake of testing
 		self.output_files = []
@@ -75,19 +76,20 @@ class torrent:
 
 		if self.peer_ips:
 			for i in self.peer_ips:
-				self.peers[i[0]] = peer.peer(i[0], i[1], self.info_dict_hash, self.peer_id)
-			print('Peers dict is', self.peers)
+				self.peer_table[i[0]] = peer.peer(i[0], i[1], self.info_dict_hash, self.peer_id)
+			print('Peers dict is', self.peer_table)
 		else:
 			print("No peers found to start handshake")
 			return
 
 		self.create_empty_files()
 
-		listen_thread = threading.Thread(target=self.listen_for_peers)
+		self.listener_object = listener.listener(self.ip, self.port, self.info_dict_hash, self.peer_table, self.conn_table)
+		listen_thread = threading.Thread(target=self.listener_object.listen_for_peers)
 		listen_thread.daemon = False #[TODO] Getting some weird error when made True
 		listen_thread.start()
 
-		for address, peer_object in self.peers.items():
+		for address, peer_object in self.peer_table.items():
 			peer_object.handshake()
 
 	def create_empty_files(self):
@@ -182,35 +184,6 @@ class torrent:
 			print("Tracker response case not handled")
 		
 		print("The list of available peers is:", self.peer_ips)
-
-	def listen_for_peers(self):
-		i = (self.ip, self.port)
-		self.listener = socket.socket()	
-		self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.listener.bind(i)
-		self.listener.listen(5)
-		print('Listening on', i)
-
-		while True:
-			connection, client_address = self.listener.accept()
-			client_address = (client_address[0], self.peers[client_address[0]].port) # This port doesn't matter, so setting it to peer's listen port to avoid confusion
-			print("Client address", client_address)
-			self.peer_table[client_address] = connection
-			for client_address, connection in self.peer_table.items():
-				data, ancdata, msg_flags, address = connection.recvmsg(1024)
-				peer_object = self.peers[client_address[0]]
-				if len(data)==68:
-					if data[28:48] == peer_object.info_dict_hash:
-						peer_object.handshake_recv = 1
-						print("Handshake packet received from", client_address)
-						if peer_object.handshake_sent == 1:
-							peer_object.handshake_made = 1
-							print("Handshake made with peer", client_address)
-					else:
-						print("Info dict hash not matching")
-				else:
-					print("Binary message ", data)
-			time.sleep(1)
 
 def main():
 	arg_parser = argparse.ArgumentParser()
