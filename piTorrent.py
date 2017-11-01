@@ -71,7 +71,7 @@ class torrent:
 		if self.peer_ips:
 			for i in self.peer_ips:
 				self.peers[i[0]] = peer.peer(i[0], i[1], self.info_dict_hash, self.peer_id)
-				print('Peers dict key value is', i[0])
+			print('Peers dict is', self.peers)
 		else:
 			print("No peers found to start handshake")
 			return
@@ -150,11 +150,11 @@ class torrent:
 					if data[28:48] == peer_object.info_dict_hash:
 						peer_object.handshake_recv = 1
 						print("Handshake packet received from", client_address)
-					if (peer_object.handshake_sent & peer_object.handshake_recv):
-						peer_object.handshake_made = 1
-						print("Handshake made with peer", client_address)
+						if peer_object.handshake_sent == 1:
+							peer_object.handshake_made = 1
+							print("Handshake made with peer", client_address)
 					else:
-						peer_object.handshake()
+						print("Info dict hash not matching")
 				else:
 					print("Binary message ", data)
 			time.sleep(1)

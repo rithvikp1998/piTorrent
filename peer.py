@@ -48,7 +48,9 @@ class peer:
 		if bytes == len(packet):
 			print("Handshake packet sent to", i)
 			self.handshake_sent = 1
-
+			if self.handshake_recv == 1:
+				self.handshake_made = 1
+				print("Handshake made with peer", (self.ip, self.port))
 	def send_message(self, type):
 		if self.handshake_made == 0:
 			print("A handshake is not made with this peer ")
