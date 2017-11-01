@@ -22,9 +22,12 @@ def check_input_file_name(value):
 
 def check_output_location(value):
 	if not os.path.isdir(value):
-		raise argparse.ArgumentTypeError('The destination should be a valid directory')
-	if not os.access(value, os.W_OK):
-		raise argparse.ArgumentError("You don't have access to write to the destination")
+		print('The destination directory is not present, attempting to create it')
+		try:
+			os.mkdir(value)
+			print("Required destination directory is created")
+		except:
+			print("Failed to create the destination directory")
 	return value
 
 def get_my_ip():
@@ -33,8 +36,9 @@ def get_my_ip():
 	return s.getsockname()[0]  # Gives IP of the interface that is used to connect to the network
 
 class torrent:
-	def __init__(self, file_name):
+	def __init__(self, file_name, destination):
 		self.file_name = file_name
+		self.destination = destination
 		self.metafile_dict = {}
 		self.info_dict = OrderedDict() # OrderedDict is mandatory to get correct value of info_dict_hash
 		self.request_parameters = {}
@@ -44,6 +48,7 @@ class torrent:
 		self.peer_table = {} # Dictionary with key being 'client_address' and value being 'connection' socket object
 		self.ip = get_my_ip()
 		self.port = MY_PORT # Hard coded for the sake of testing
+		self.output_files = []
 
 		self.metafile = open(file_name, 'r', encoding = "ISO-8859-1")
 		if self.metafile.read(1)=='d':
@@ -76,12 +81,57 @@ class torrent:
 			print("No peers found to start handshake")
 			return
 
+		self.create_empty_files()
+
 		listen_thread = threading.Thread(target=self.listen_for_peers)
 		listen_thread.daemon = False #[TODO] Getting some weird error when made True
 		listen_thread.start()
 
 		for address, peer_object in self.peers.items():
 			peer_object.handshake()
+
+	def create_empty_files(self):
+		if 'files' not in self.info_dict:
+			# Only single file present
+			try:
+				file = open(os.path.join(self.destination, self.info_dict['name']), 'w')
+				self.output_files.append(file) # [TODO] Close the files at the end
+				print("File created", self.info_dict['name'])
+			except:
+				print("Failed to create file", os.path.join(self.destination, self.info_dict['name']))
+		else:
+			# Multiple files present
+			if 'name' in self.info_dict:
+				# Parent directory specified
+				if not os.path.isdir(os.path.join(self.destination, self.info_dict['name'])):
+					try:
+						os.mkdir(os.path.join(self.destination, self.info_dict['name']))
+						print("Created parent directory", os.path.join(self.destination, self.info_dict['name']))
+					except:
+						print("Failed to create the parent directory", os.path.join(self.destination, self.info_dict['name']))
+				else:
+					print("Parent directory already present")
+			
+			if 'files' in self.info_dict:
+				for file_dict in self.info_dict['files']:
+					if not os.path.isdir(os.path.join(self.destination, *file_dict['path'][:-1])):
+						try:
+							os.mkdir(os.path.join(self.destination, *file_dict['path'][:-1]))
+						except:
+							print("Failed to create directory", os.path.join(self.destination, *file_dict['path'][:-1]))
+					else:
+						print("Directory already present", os.path.join(self.destination, *file_dict['path'][:-1]))
+					if not os.path.isfile(os.path.join(self.destination, *file_dict['path'])):
+						try:
+							file = open(os.path.join(self.destination, *file_dict['path']), 'w')
+							self.output_files.append(file) # [TODO] Close the files at the end
+							print("File created", os.path.join(self.destination, *file_dict['path']))
+						except:
+							print("Failed to create file", os.path.join(self.destination, *file_dict['path']))
+					else:
+						print("File already present", os.path.join(self.destination, *file_dict['path']))
+			else:
+				print("Incorret torrent metafile")
 
 	def send_tracker_request(self):
 		self.request_parameters['info_hash'] = self.info_dict_hash
@@ -173,7 +223,7 @@ def main():
 		print("Please specify a output destination using --dest option")
 		return
 
-	torrent_object = torrent(args.metafile[0])
+	torrent_object = torrent(args.metafile[0], args.dest[0])
 
 if __name__=='__main__':
 	main()
