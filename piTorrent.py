@@ -103,33 +103,36 @@ class torrent:
 			# Multiple files present
 			if 'name' in self.info_dict:
 				# Parent directory specified
-				if not os.path.isdir(os.path.join(self.destination, self.info_dict['name'])):
+				file_path = os.path.join(self.destination, self.info_dict['name'])
+				if not os.path.isdir(file_path):
 					try:
-						os.mkdir(os.path.join(self.destination, self.info_dict['name']))
-						print("Created parent directory", os.path.join(self.destination, self.info_dict['name']))
+						os.mkdir(file_path)
+						print("Created parent directory", file_path)
 					except:
-						print("Failed to create the parent directory", os.path.join(self.destination, self.info_dict['name']))
+						print("Failed to create the parent directory", file_path)
 				else:
 					print("Parent directory already present")
 			
 			if 'files' in self.info_dict:
 				for file_dict in self.info_dict['files']:
-					if not os.path.isdir(os.path.join(self.destination, *file_dict['path'][:-1])):
+					directory_path = os.path.join(self.destination, *file_dict['path'][:-1])
+					file_path = os.path.join(self.destination, *file_dict['path'])
+					if not os.path.isdir(directory_path):
 						try:
-							os.mkdir(os.path.join(self.destination, *file_dict['path'][:-1]))
+							os.mkdir(directory_path)
 						except:
-							print("Failed to create directory", os.path.join(self.destination, *file_dict['path'][:-1]))
+							print("Failed to create directory", directory_path)
 					else:
-						print("Directory already present", os.path.join(self.destination, *file_dict['path'][:-1]))
-					if not os.path.isfile(os.path.join(self.destination, *file_dict['path'])):
+						print("Directory already present", directory_path)
+					if not os.path.isfile(file_path):
 						try:
-							file = open(os.path.join(self.destination, *file_dict['path']), 'w')
+							file = open(file_path, 'w')
 							self.output_files.append(file) # [TODO] Close the files at the end
-							print("File created", os.path.join(self.destination, *file_dict['path']))
+							print("File created", file_path)
 						except:
-							print("Failed to create file", os.path.join(self.destination, *file_dict['path']))
+							print("Failed to create file", file_path)
 					else:
-						print("File already present", os.path.join(self.destination, *file_dict['path']))
+						print("File already present", file_path)
 			else:
 				print("Incorret torrent metafile")
 
