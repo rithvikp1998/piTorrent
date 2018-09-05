@@ -202,11 +202,11 @@ def main():
     if not args.metafile:
         print("Please specify a metafile using --metafile option")
         return
-    if not args.dest:
+    if not args.destination:
         print("Please specify a output destination using --destination option")
         return
 
-    torrent_object = Torrent(args.metafile[0], args.dest[0])
+    torrent_object = Torrent(args.metafile[0], args.destination[0])
 
 
 if __name__ == '__main__':

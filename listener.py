@@ -25,7 +25,7 @@ class Listener:
             print("Client address", client_address)
             self.conn_table[client_address] = connection
             for client_address, connection in self.conn_table.items():
-                data, anc_data, msg_flags, address = connection.receivedmsg(1024)
+                data, anc_data, msg_flags, address = connection.recvmsg(1024)
                 peer_object = self.peer_table[client_address[0]]
                 if len(data) == 68:
                     if data[28:48] == peer_object.info_dict_hash:
